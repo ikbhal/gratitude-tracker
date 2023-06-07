@@ -3,6 +3,9 @@
 <head>
   <title>Gratitude Tracker</title>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Include the Firebase JavaScript SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
   <style>
     ul {
       list-style-type: none;
@@ -31,11 +34,21 @@
   <ul id="peopleList"></ul>
 
   <script>
-    $(document).ready(function() {
-      // Load stored data
-      loadStoredData();
+    // Initialize Firebase with your project credentials
+    var firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-      // Handle form submission
+    firebase.initializeApp(firebaseConfig);
+
+    $(document).ready(function() {
+      loadStoredData();
       $("#gratitudeForm").on("submit", function(event) {
         event.preventDefault();
         addThanks();
@@ -44,41 +57,48 @@
 
     function loadStoredData() {
       const today = new Date().toLocaleDateString();
-      const storedDate = localStorage.getItem("date");
+      const dbRef = firebase.database().ref(today);
 
-      if (storedDate === today) {
-        const storedCount = localStorage.getItem("count");
-        const storedPeople = JSON.parse(localStorage.getItem("people"));
+      dbRef.once("value", function(snapshot) {
+        if (snapshot.exists()) {
+          const storedCount = snapshot.child("count").val();
+          const storedPeople = snapshot.child("people").val();
 
-        $("#thanksCount").text(storedCount);
+          $("#thanksCount").text(storedCount);
 
-        if (storedPeople) {
-          storedPeople.forEach(function(person) {
-            addPersonToList(person);
-          });
+          if (storedPeople) {
+            $.each(storedPeople, function(key, person) {
+              addPersonToList(person);
+            });
+          }
+        } else {
+          const initData = {
+            count: 0,
+            people: []
+          };
+
+          dbRef.set(initData);
+          $("#thanksCount").text(initData.count);
         }
-      } else {
-        localStorage.clear();
-        localStorage.setItem("date", today);
-      }
+      });
     }
 
     function addThanks() {
       const personName = $("#personName").val();
 
       if (personName.trim() !== "") {
-        let count = parseInt($("#thanksCount").text());
-        let people = JSON.parse(localStorage.getItem("people")) || [];
+        const today = new Date().toLocaleDateString();
+        const dbRef = firebase.database().ref(today);
 
-        count++;
-        people.push(personName);
+        dbRef.transaction(function(data) {
+          if (data) {
+            data.count = data.count + 1;
+            data.people.push(personName);
+          }
+          return data;
+        });
 
-        localStorage.setItem("count", count);
-        localStorage.setItem("people", JSON.stringify(people));
-
-        $("#thanksCount").text(count);
         addPersonToList(personName);
-
         $("#personName").val("");
       }
     }
