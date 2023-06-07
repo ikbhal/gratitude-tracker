@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gratitude Tracker</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gratitude Tracker</h1>
+
+  <form id="gratitudeForm">
+    <label>
+      Person's Name:
+      <input type="text" id="personName" placeholder="Enter a name" />
+    </label>
+
+    <button type="submit">Add Thanks</button>
+  </form>
+
+  <p>Total Thanks: <span id="thanksCount">0</span></p>
+
+  <ul id="peopleList"></ul>
+
+  <script>
+    $(document).ready(function() {
+      // Load stored data
+      loadStoredData();
+
+      // Handle form submission
+      $("#gratitudeForm").on("submit", function(event) {
+        event.preventDefault();
+        addThanks();
+      });
+    });
+
+    function loadStoredData() {
+      const today = new Date().toLocaleDateString();
+      const storedDate = localStorage.getItem("date");
+
+      if (storedDate === today) {
+        const storedCount = localStorage.getItem("count");
+        const storedPeople = JSON.parse(localStorage.getItem("people"));
+
+        $("#thanksCount").text(storedCount);
+
+        if (storedPeople) {
+          storedPeople.forEach(function(person) {
+            addPersonToList(person);
+          });
+        }
+      } else {
+        localStorage.clear();
+        localStorage.setItem("date", today);
+      }
+    }
+
+    function addThanks() {
+      const personName = $("#personName").val();
+
+      if (personName.trim() !== "") {
+        let count = parseInt($("#thanksCount").text());
+        let people = JSON.parse(localStorage.getItem("people")) || [];
+
+        count++;
+        people.push(personName);
+
+        localStorage.setItem("count", count);
+        localStorage.setItem("people", JSON.stringify(people));
+
+        $("#thanksCount").text(count);
+        addPersonToList(personName);
+
+        $("#personName").val("");
+      }
+    }
+
+    function addPersonToList(person) {
+      $("#peopleList").append("<li>" + person + "</li>");
+    }
+  </script>
+</body>
+</html>
